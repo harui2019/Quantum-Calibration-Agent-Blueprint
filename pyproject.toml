@@ -3,10 +3,11 @@ name = "qca"
 version = "0.1.0"
 description = "Quantum Calibration Agent"
 license = "Apache-2.0"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
     "deepagents==0.5.3",
     "deepagents-cli==0.0.40",
+    "pydantic>=2.10,<2.14",
     "typer==0.24.1",
     "rich==14.3.4",
     "h5py==3.16.0",
@@ -43,7 +44,19 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 py-modules = ["cli", "prompt", "server"]
-packages = ["tools", "vlm", "core", "scripts"]
+packages = [
+    "tools",
+    "vlm",
+    "core",
+    "scripts",
+    "data",
+    "data.experiments",
+    "data.knowledge",
+    "data.knowledge.documents",
+    "data.knowledge.memory",
+    "data.knowledge.skills",
+    "data.workflows",
+]
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml", "*.json", "*.md"]
