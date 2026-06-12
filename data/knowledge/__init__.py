@@ -1,0 +1,1 @@
+"""Knowledge assets for prompt assembly."""

@@ -1,0 +1,1 @@
+"""Packaged memory seed assets."""
