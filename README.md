@@ -55,6 +55,23 @@ cp .env.example .env
 # NVIDIA_API_KEY=nvapi-your-key-here
 # ANTHROPIC_API_KEY=sk-ant-your-key-here
 # OPENAI_API_KEY=sk-your-key-here
+# TAVILY_API_KEY=tvly=your-key-here
+```
+
+Then loads `.env`.
+
+- PowerShell
+
+```sh
+# For PowerShell, the envirnment load by export only works in current session
+# It will be clear when reopen
+export .env
+```
+
+- Bash/Zsh
+
+```sh
+export .env
 ```
 
 ### Running QCA
