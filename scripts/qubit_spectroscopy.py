@@ -22,7 +22,7 @@ from typing import Annotated
 
 import numpy as np
 
-from .qubit_params import get_qubit_params
+from qubit_params import get_qubit_params
 
 
 # Redirect progress output to stderr so stdout only has JSON result

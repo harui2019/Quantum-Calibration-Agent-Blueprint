@@ -15,11 +15,19 @@
 
 """Mock experiments with realistic wall-clock execution time for workflow testing."""
 
-from .resonator_spectroscopy import resonator_spectroscopy
-from .qubit_spectroscopy import qubit_spectroscopy
-from .rabi_oscillation import rabi_oscillation
-from .t1_measurement import t1_measurement
-from .ramsey_measurement import ramsey_measurement
+import sys
+from pathlib import Path
+
+# Add demo directory to path for imports
+demo_path = Path(__file__).parent.parent / "demo"
+if str(demo_path) not in sys.path:
+    sys.path.insert(0, str(demo_path))
+
+from resonator_spectroscopy import resonator_spectroscopy
+from qubit_spectroscopy import qubit_spectroscopy
+from rabi_oscillation import rabi_oscillation
+from t1_measurement import t1_measurement
+from ramsey_measurement import ramsey_measurement
 
 __all__ = [
     "resonator_spectroscopy",

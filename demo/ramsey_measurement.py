@@ -22,7 +22,20 @@ from typing import Annotated
 
 import numpy as np
 
-from .qubit_params import get_qubit_params
+import sys
+from pathlib import Path
+
+# Add parent directory to path for qubit_params import
+script_dir = Path(__file__).parent
+if str(script_dir.parent) not in sys.path:
+    sys.path.insert(0, str(script_dir.parent))
+
+# Also add scripts directory for qubit_params
+scripts_dir = script_dir.parent / "scripts"
+if str(scripts_dir) not in sys.path:
+    sys.path.insert(0, str(scripts_dir))
+
+from qubit_params import get_qubit_params
 
 
 # Redirect progress output to stderr so stdout only has JSON result
