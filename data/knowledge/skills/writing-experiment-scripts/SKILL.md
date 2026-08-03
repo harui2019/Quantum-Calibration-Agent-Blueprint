@@ -12,7 +12,7 @@ How to create experiment scripts compatible with the lab system.
 | Requirement | Details |
 |-------------|---------|
 | Location | Scripts directory (see system prompt) |
-| Function | ONE public function per file (no `_` prefix) |
+| Function | Every public function in a file (no `_` prefix) becomes its own experiment |
 | Type hints | Required with `Annotated` bounds |
 | Docstring | Google-style with Args/Returns |
 | Return | Dict with `status`, `results`, `arrays`, `plots` |
@@ -295,7 +295,7 @@ qca experiments list --human
 Before running your script:
 
 - [ ] File is in the scripts directory
-- [ ] Only ONE public function (no `_` prefix)
+- [ ] Every function you want discoverable is public (no `_` prefix); note `qca experiments validate` only previews the first one it finds in a file, but `run_experiment`/`lab` will discover all of them
 - [ ] All parameters have type hints with `Annotated`
 - [ ] All parameters have default values (or are intentionally required)
 - [ ] Function has Google-style docstring

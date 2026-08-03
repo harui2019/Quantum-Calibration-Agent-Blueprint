@@ -335,6 +335,16 @@ export const ExperimentDetails: React.FC<ExperimentDetailsProps> = ({
                   style={{ width: '100%', height: '100%' }}
                   useResizeHandler
                 />
+              ) : experiment.plots[selectedPlotIndex]?.data &&
+                (experiment.plots[selectedPlotIndex].format === 'png' ||
+                  experiment.plots[selectedPlotIndex].format === 'base64') ? (
+                <div className="h-full w-full flex items-center justify-center overflow-auto">
+                  <img
+                    src={`data:image/png;base64,${experiment.plots[selectedPlotIndex].data as string}`}
+                    alt={experiment.plots[selectedPlotIndex].name || 'Experiment plot'}
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </div>
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-gray-500 dark:text-gray-400">

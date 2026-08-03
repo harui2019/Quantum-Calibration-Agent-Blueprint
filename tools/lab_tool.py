@@ -214,7 +214,12 @@ def _run_experiment(
             "error": f"Experiment '{experiment_name}' not found",
             "available_experiments": [e.name for e in available],
         }
-
+    if experiment_name.startswith("qblox_"):
+        python_path = "/home/reny871224/micromamba/envs/qblox-training/bin/python"
+    elif experiment_name.startswith("qm_"):
+        python_path = "/Users/renychang/miniconda3/envs/qualibrate_env/bin/python"
+    else:
+        python_path = None
     # Generate experiment ID and timestamp BEFORE running
     # This allows real-time log file access during execution
     now = datetime.now(timezone.utc)

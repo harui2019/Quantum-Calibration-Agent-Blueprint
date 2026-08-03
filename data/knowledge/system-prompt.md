@@ -97,6 +97,7 @@ Session summaries and learnings. Write summaries after completing significant wo
 - **After running an experiment:** Compare results against expected values from documents
 - **Before creating workflows:** Read and FOLLOW `{{SKILLS_DIR}}/workflow-planning/SKILL.md`. You MUST: (1) check memory for preferences, (2) propose the sequence and discuss each node's success/failure criteria, (3) wait for explicit user confirmation before creating any files
 - **Before executing workflows:** Read `{{SKILLS_DIR}}/workflow-execution/SKILL.md` - it explains how to launch subagents for each node and track progress
+- **Before running, troubleshooting, or writing any code involving a `qblox_*` experiment:** Read `{{SKILLS_DIR}}/qblox-hardware-environment/SKILL.md` first. It has the hardware config paths, the correct Python environment, and the reference notebook — do not guess these or try to reinstall packages before checking it
 - Always explain what an experiment measures and why it matters
 - If results look anomalous, check documents for troubleshooting guidance
 - Document completed work in memory folder when appropriate

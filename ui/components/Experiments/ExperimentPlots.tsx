@@ -115,13 +115,17 @@ export const ExperimentPlots: React.FC<ExperimentPlotsProps> = ({
               useResizeHandler
             />
           </div>
+        ) : currentPlot?.data && (currentPlot.format === 'png' || currentPlot.format === 'base64') ? (
+          <div className="h-full w-full flex items-center justify-center overflow-auto">
+            <img
+              src={`data:image/png;base64,${currentPlot.data as string}`}
+              alt={currentPlot.name || 'Experiment plot'}
+              className="max-w-full max-h-full object-contain"
+            />
+          </div>
         ) : (
           <div className="flex items-center justify-center h-full">
-            <div className="text-gray-500 dark:text-gray-400">
-              {currentPlot?.format === 'png' || currentPlot?.format === 'base64'
-                ? 'Image plots not yet supported'
-                : 'No plot data available'}
-            </div>
+            <div className="text-gray-500 dark:text-gray-400">No plot data available</div>
           </div>
         )}
       </div>

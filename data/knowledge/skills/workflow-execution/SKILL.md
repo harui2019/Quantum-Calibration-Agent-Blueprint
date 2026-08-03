@@ -165,19 +165,7 @@ If no such node exists:
 
 3. **Gather context** from completed nodes and plan.md
 
-4. **Run the experiment** using `run_experiment`:
-   ```python
-   run_experiment(
-     experiment_name="resonator_spectroscopy",
-     params={
-       "center_freq": 6.0,
-       "span": 0.2,
-       "num_points": 101,
-       "power": -20,
-       "num_averages": 2000
-     }
-   )
-   ```
+4. **Run the experiment** using `run_experiment`. **Always call `lab(action="schema", experiment_name=...)` first to get the real parameter names for that specific experiment — never reuse parameter names from a different experiment or from an example in this document.** Experiment names and parameters differ per experiment; see `data/knowledge/documents/03_Experiment_API.md` for the current, authoritative list.
 
 5. **Analyze results** using `vlm_inspect` when visual verification is needed:
    ```python
@@ -367,7 +355,7 @@ Executing node_1: Resonator Spectroscopy...
 [Calls: workflow(action="update", ..., data={"current_node": "node_1", "nodes.node_1.state": "running", ...})]
 [Calls: workflow(action="log", ..., event="node_started", node="node_1")]
 
-> Running experiment with center_freq=6.0 GHz, span=0.2 GHz
+> Running experiment (params from lab(action="schema", ...) for this experiment, not copied from this example)
 > Experiment complete: 20240315_103015_resonator
 > Analyzing plot with vlm_inspect...
 > VLM: "Clear dip visible at 5.823 GHz. SNR ~12."
@@ -383,11 +371,11 @@ Moving to next node...
 Executing node_2: Qubit Spectroscopy...
 
 > Using resonator_frequency = 5.823 GHz from context
-> Attempt 1: center=4.5 GHz, span=0.2 GHz
+> Attempt 1: default sweep width
 > Analyzing plot... No clear peak found
-> Attempt 2: Expanding range to span=0.4 GHz
+> Attempt 2: widened sweep, recentered on best candidate
 > Analyzing plot... Still no peak visible
-> Attempt 3: Expanding range to span=0.6 GHz
+> Attempt 3: widened further
 > Analyzing plot... No peak found
 
 Node_2 FAILED after 3 attempts

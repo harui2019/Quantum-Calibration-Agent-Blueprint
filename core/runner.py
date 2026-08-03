@@ -115,12 +115,16 @@ def run_experiment(
 
     # Build subprocess command
     # Use Python code passed to -c that imports the function and calls it
-    # Insert the parent of scripts_dir so relative imports within the package work
+    # Insert the parent of scripts_dir so the package-qualified import works, and
+    # scripts_dir itself so the scripts' own bare imports (e.g. `from _ising_utils
+    # import ...`) resolve regardless of the subprocess's working directory
+    scripts_dir_str = str(Path(scripts_dir).resolve())
     scripts_parent = str(Path(scripts_dir).parent)
     package_name = Path(scripts_dir).name
     python_code = f"""
 import sys, json
 sys.path.insert(0, '{scripts_parent}')
+sys.path.insert(0, '{scripts_dir_str}')
 from {package_name}.{module_name} import {name}
 params = json.loads(sys.stdin.read())
 result = {name}(**params)
