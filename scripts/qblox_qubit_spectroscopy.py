@@ -13,7 +13,7 @@ from _ising_utils import make_artifact_dir, png_plot_entry
 
 sys.path.append(str(HARDWARE_REPO_PATH))
 
-from cal05_qubit_spectroscopy import MultiplexedQubitSpectroscopy
+from cal05a_qubit_spectroscopy_pulsed import MultiplexedQubitSpectroscopyPulsed
 
 
 def _real_list(values) -> list[float]:
@@ -34,15 +34,16 @@ def qblox_qubit_spectroscopy(
     f01_width_mhz: Annotated[float, (1.0, 1000.0)] = 400.0,
     f01_npoints: Annotated[int, (21, 2001)] = 200,
     repetitions: Annotated[int, (1, 10000)] = 200,
-    voltage_offset: Annotated[float, (0.0, 1.0)] = 0.2,
+    saturation_amp: Annotated[float, (0.0, 1.0)] = 0.005,
+    saturation_duration_s: Annotated[float, (1e-9, 100e-6)] = 20e-6,
     drive_att_db: Annotated[int, (0, 30)] = 0,
-    flux_mode: str = "joint",
-    reset_type: str = "thermal",
     minimum_linewidth_mhz: float = 0.05,
     maximum_linewidth_mhz: float = 50.0,
     apply_update: bool = False,
 ) -> dict:
-    """Run Qblox continuous-wave qubit spectroscopy and fit the qubit frequency.
+    """Run Qblox pulsed (sequential saturation-pulse) qubit spectroscopy and fit the
+    qubit frequency. Drive and readout never overlap in time, avoiding the AC-Stark
+    contamination a continuous-wave drive can cause.
 
     Args:
         qubit_name:
@@ -53,14 +54,12 @@ def qblox_qubit_spectroscopy(
             Number of frequency points.
         repetitions:
             Number of repeated spectroscopy sweeps.
-        voltage_offset:
-            Continuous-wave microwave drive amplitude in volts.
+        saturation_amp:
+            Saturation pulse amplitude in volts.
+        saturation_duration_s:
+            Saturation pulse duration in seconds.
         drive_att_db:
             Qblox output attenuation in dB. Must be even and between 0 and 30.
-        flux_mode:
-            Flux-point mode: joint, independent, or arbitrary.
-        reset_type:
-            Reset method: thermal or active.
         minimum_linewidth_mhz:
             Reject the fit if the fitted linewidth is below this (likely a spurious peak).
         maximum_linewidth_mhz:
@@ -77,38 +76,23 @@ def qblox_qubit_spectroscopy(
             "error": "drive_att_db must be an even integer between 0 and 30.",
         }
 
-    if flux_mode not in {"joint", "independent", "arbitrary"}:
-        return {
-            "status": "failed",
-            "error": (
-                "flux_mode must be 'joint', 'independent', or 'arbitrary'."
-            ),
-        }
-
-    if reset_type not in {"thermal", "active"}:
-        return {
-            "status": "failed",
-            "error": "reset_type must be 'thermal' or 'active'.",
-        }
-
     try:
         # Initialize hardware and resolve the requested hardware qubit.
         hw_agent = get_hardware_agent()
         qubit = get_qubit(qubit_name)
 
-        experiment = MultiplexedQubitSpectroscopy([qubit])
+        experiment = MultiplexedQubitSpectroscopyPulsed([qubit])
 
         # Your experiment currently prints compiled schedules and analysis
         # messages. Send these to stderr so QCA stdout remains valid JSON.
         with contextlib.redirect_stdout(sys.stderr):
             experiment.execute(
-                flux_point_joint_or_independent_or_arbitrary=flux_mode,
                 f01_width=f01_width_mhz * 1e6,
                 f01_npoints=f01_npoints,
                 repetitions=repetitions,
-                voltage_offset={qubit_name: voltage_offset},
+                saturation_amp=saturation_amp,
+                saturation_duration=saturation_duration_s,
                 drive_att={qubit_name: drive_att_db},
-                reset_type=reset_type,
             )
 
             experiment.analyze(qubits_to_analyze=[qubit_name])

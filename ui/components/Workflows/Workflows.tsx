@@ -312,7 +312,7 @@ const LogEntryDisplay = ({ entry }: { entry: ParsedLogEntry }) => {
 
 // Plot display for a workflow node's experiment result
 const NodePlot = ({ experimentId }: { experimentId: string }) => {
-  const [plotData, setPlotData] = useState<any>(null);
+  const [plot, setPlot] = useState<{ format?: string; data?: any } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -327,10 +327,10 @@ const NodePlot = ({ experimentId }: { experimentId: string }) => {
         return null;
       })
       .then(res => res?.json())
-      .then(plot => {
+      .then(result => {
         if (cancelled) return;
-        if (plot && plot.data) {
-          setPlotData(plot.data);
+        if (result && result.data) {
+          setPlot(result);
         }
         setLoading(false);
       })
@@ -348,7 +348,7 @@ const NodePlot = ({ experimentId }: { experimentId: string }) => {
     );
   }
 
-  if (!plotData) {
+  if (!plot) {
     return (
       <div className="flex items-center justify-center h-40 w-64 text-xs text-gray-400 dark:text-gray-500">
         No plot available
@@ -356,6 +356,19 @@ const NodePlot = ({ experimentId }: { experimentId: string }) => {
     );
   }
 
+  if (plot.format === 'png' || plot.format === 'jpeg' || plot.format === 'jpg') {
+    return (
+      <div className="h-48 w-72 flex items-center justify-center">
+        <img
+          src={`data:image/${plot.format};base64,${plot.data}`}
+          alt="Experiment plot"
+          className="max-h-full max-w-full object-contain"
+        />
+      </div>
+    );
+  }
+
+  const plotData = plot.data || {};
   return (
     <div className="h-48 w-72">
       <Plot

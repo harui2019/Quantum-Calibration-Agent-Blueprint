@@ -61,7 +61,7 @@ Failure modes actually observed in this system, in two groups: **plumbing failur
 | `fitted_frequency_outside_scan` | resonator spectroscopy | Fit extrapolated a resonance outside the swept window entirely — treat as no real signal found | Widen the span significantly; check whether the qubit/resonator is even connected on the assumed port |
 | "no operating point met the contrast/shift thresholds" | punchout (attenuation/amplitude) | No attenuation/amplitude step in the sweep satisfied both the contrast and frequency-shift criteria | Widen `maximum_normalized_frequency_shift`/lower `minimum_normalized_contrast` cautiously, or widen the sweep range |
 | TOF `message` indicating no clean edge | time_of_flight | The magnitude trace didn't show a clean enough rising edge to fit a delay | Increase `pulse_amplitude`, check `acquisition_delay_s` isn't cutting off the edge |
-| `drive_att_db must be an even integer...` / invalid `flux_mode`/`reset_type` | qubit spectroscopy | Parameter validation failed before touching hardware | Fix the parameter — this is a caller error, not a hardware issue |
+| `drive_att_db must be an even integer...` | qubit spectroscopy | Parameter validation failed before touching hardware | Fix the parameter — this is a caller error, not a hardware issue |
 
 For all of the resonator/punchout/TOF cases above, the failure is real data telling you the current parameters or config assumption is wrong — the correct response is almost always **adjust and retry**, not repeat identically. For the qubit-spectroscopy parameter-validation cases, fix the input; retrying unchanged will fail identically every time.
 

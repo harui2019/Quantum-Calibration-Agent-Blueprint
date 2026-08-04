@@ -75,7 +75,7 @@ const NODE_COLORS = {
 // Custom node component with hover tooltip
 const CustomNode = ({ data, selected }: NodeProps) => {
   const [showTooltip, setShowTooltip] = useState(false);
-  const [plotData, setPlotData] = useState<any>(null);
+  const [plot, setPlot] = useState<{ format?: string; data?: any } | null>(null);
   const [plotLoading, setPlotLoading] = useState(false);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -85,7 +85,7 @@ const CustomNode = ({ data, selected }: NodeProps) => {
 
   // Fetch plot when tooltip is shown and experiment_id exists
   useEffect(() => {
-    if (showTooltip && data.experiment_id && !plotData && !plotLoading) {
+    if (showTooltip && data.experiment_id && !plot && !plotLoading) {
       setPlotLoading(true);
       // First get list of plots
       fetch(`${HTTP_PROXY_PATH}/history/${data.experiment_id}/plots`)
@@ -99,9 +99,9 @@ const CustomNode = ({ data, selected }: NodeProps) => {
           return null;
         })
         .then(res => res?.json())
-        .then(plot => {
-          if (plot && plot.data) {
-            setPlotData(plot.data);
+        .then(result => {
+          if (result && result.data) {
+            setPlot(result);
           }
           setPlotLoading(false);
         })
@@ -109,12 +109,12 @@ const CustomNode = ({ data, selected }: NodeProps) => {
           setPlotLoading(false);
         });
     }
-  }, [showTooltip, data.experiment_id, plotData, plotLoading]);
+  }, [showTooltip, data.experiment_id, plot, plotLoading]);
 
   // Clear plot data when tooltip hides
   useEffect(() => {
     if (!showTooltip) {
-      setPlotData(null);
+      setPlot(null);
     }
   }, [showTooltip]);
 
@@ -137,7 +137,7 @@ const CustomNode = ({ data, selected }: NodeProps) => {
 
   const tooltip = showTooltip && tooltipPos ? createPortal(
     <div
-      className={plotData ? 'w-96' : 'w-64'}
+      className={plot ? 'w-96' : 'w-64'}
       style={{
         position: 'fixed',
         left: tooltipPos.x,
@@ -192,19 +192,27 @@ const CustomNode = ({ data, selected }: NodeProps) => {
             <div className="flex items-center justify-center h-32">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500"></div>
             </div>
-          ) : plotData ? (
+          ) : plot && (plot.format === 'png' || plot.format === 'jpeg' || plot.format === 'jpg') ? (
+            <div className="h-48 w-full flex items-center justify-center">
+              <img
+                src={`data:image/${plot.format};base64,${plot.data}`}
+                alt="Experiment plot"
+                className="max-h-full max-w-full object-contain"
+              />
+            </div>
+          ) : plot ? (
             <div className="h-48 w-full">
               <Plot
-                data={plotData.data || []}
+                data={plot.data?.data || []}
                 layout={{
-                  ...(plotData.layout || {}),
+                  ...(plot.data?.layout || {}),
                   autosize: true,
                   margin: { l: 40, r: 20, t: 30, b: 40 },
                   paper_bgcolor: 'transparent',
                   plot_bgcolor: 'transparent',
                   font: { color: isDark ? '#e5e7eb' : '#374151', size: 9 },
-                  xaxis: { ...(plotData.layout?.xaxis || {}), gridcolor: isDark ? '#4b5563' : '#e5e7eb' },
-                  yaxis: { ...(plotData.layout?.yaxis || {}), gridcolor: isDark ? '#4b5563' : '#e5e7eb' },
+                  xaxis: { ...(plot.data?.layout?.xaxis || {}), gridcolor: isDark ? '#4b5563' : '#e5e7eb' },
+                  yaxis: { ...(plot.data?.layout?.yaxis || {}), gridcolor: isDark ? '#4b5563' : '#e5e7eb' },
                 }}
                 config={{ displayModeBar: false, staticPlot: true }}
                 style={{ width: '100%', height: '100%' }}

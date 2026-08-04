@@ -95,7 +95,7 @@ Unlike the attenuation version, this one applies **per-qubit** amplitudes indepe
 
 ## `qblox_qubit_spectroscopy`
 
-**Purpose**: CW qubit spectroscopy to locate `f01`. **Single qubit per call** — this is the one wrapper that doesn't take a `qubits` list.
+**Purpose**: Pulsed (sequential saturation-pulse) qubit spectroscopy to locate `f01`. Drive and readout never overlap in time — avoids the AC-Stark contamination a continuous-wave drive can cause. **Single qubit per call** — this is the one wrapper that doesn't take a `qubits` list.
 
 **Inputs**
 
@@ -105,10 +105,9 @@ Unlike the attenuation version, this one applies **per-qubit** amplitudes indepe
 | `f01_width_mhz` | float, range (1, 1000) | `400.0` | |
 | `f01_npoints` | int, range (21, 2001) | `200` | |
 | `repetitions` | int, range (1, 10000) | `200` | |
-| `voltage_offset` | float, range (0, 1) | `0.2` | CW drive amplitude (V) |
+| `saturation_amp` | float, range (0, 1) | `0.005` | Saturation pulse amplitude (V) |
+| `saturation_duration_s` | float, range (1e-9, 100e-6) | `20e-6` | Saturation pulse duration (s) |
 | `drive_att_db` | int, range (0, 30) | `0` | **Must be even** or the call returns `status: "failed"` before touching hardware |
-| `flux_mode` | str | `"joint"` | Must be `"joint"`, `"independent"`, or `"arbitrary"` |
-| `reset_type` | str | `"thermal"` | Must be `"thermal"` or `"active"` |
 | `minimum_linewidth_mhz` | float | `0.05` | Fit rejected below this (likely a spurious peak) |
 | `maximum_linewidth_mhz` | float | `50.0` | Fit rejected above this (likely a bad/noisy fit) |
 | `apply_update` | bool | `False` | If `True` and the fit passes the linewidth acceptance checks, writes the fitted `f01` into the qubit's device config so downstream experiments pick it up automatically |

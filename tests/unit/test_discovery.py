@@ -21,7 +21,7 @@ from core.discovery import (
     discover_experiments,
     get_experiment_schema,
     validate_script,
-    _extract_schema_from_file,
+    _extract_schemas_from_file,
     _parse_function_parameters,
 )
 
@@ -75,6 +75,27 @@ def exp2(param: Annotated[int, (0, 100)] = 50) -> dict:
         assert len(experiments) == 2
         names = {exp.name for exp in experiments}
         assert names == {"exp1", "exp2"}
+
+    def test_discover_multiple_functions_in_one_file(self, tmp_path):
+        """Every qualifying public function in a single file is discoverable,
+        not just the first (regression test — discovery used to silently drop
+        every function after the first one in a file)."""
+        (tmp_path / "multi.py").write_text(
+            '''
+from typing import Annotated
+
+def first_experiment(param: Annotated[float, (0.0, 10.0)] = 1.0) -> dict:
+    """First experiment in the file."""
+    return {"status": "success"}
+
+def second_experiment(param: Annotated[int, (0, 100)] = 50) -> dict:
+    """Second experiment in the same file."""
+    return {"status": "success"}
+'''
+        )
+        experiments = discover_experiments(tmp_path)
+        names = {exp.name for exp in experiments}
+        assert names == {"first_experiment", "second_experiment"}
 
     def test_skip_syntax_error_scripts(self, tmp_path):
         """Scripts with syntax errors are skipped."""

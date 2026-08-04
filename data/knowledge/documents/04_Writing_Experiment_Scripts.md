@@ -121,7 +121,7 @@ Every existing wrapper in `scripts/` follows this shape. Deviating from it (e.g.
 
 Two acceptable patterns, both already in use:
 
-1. **Fail fast on bad parameters, before touching hardware** (see `qblox_qubit_spectroscopy`'s even-attenuation / enum checks): validate inputs at the top of the function and `return {"status": "failed", "error": "..."}` immediately if invalid. Cheap and avoids wasting hardware time on a call that was never going to work.
+1. **Fail fast on bad parameters, before touching hardware** (see `qblox_qubit_spectroscopy`'s even-attenuation check): validate inputs at the top of the function and `return {"status": "failed", "error": "..."}` immediately if invalid. Cheap and avoids wasting hardware time on a call that was never going to work.
 2. **Deterministic quality gates after the fact** (see the other four wrappers): always run the measurement, always fit, then decide `accepted` per qubit from numeric thresholds (R², SNR, contrast, edge margin, etc.) and set the top-level `status` accordingly. Prefer this pattern when the "failure" is a legitimate measurement outcome (bad resonance, low contrast) rather than a programming error — record *why* it failed in `failure_reasons`/`error` rather than raising an exception.
 
 Do **not** let a Python exception escape uncaught to the top level unless it's a genuine bug — an uncaught exception makes the whole subprocess exit non-zero, and `core/runner.py` surfaces that as `"Experiment subprocess failed: <stderr tail>"`, which loses the structured per-qubit detail a `status: "failed"` return would have preserved.

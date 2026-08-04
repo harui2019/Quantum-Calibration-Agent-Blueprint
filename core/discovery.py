@@ -44,9 +44,7 @@ def discover_experiments(scripts_dir: Path) -> list[ExperimentSchema]:
         if script_path.name.startswith("_"):
             continue
 
-        schema = _extract_schema_from_file(script_path)
-        if schema:
-            experiments.append(schema)
+        experiments.extend(_extract_schemas_from_file(script_path))
 
     return experiments
 
@@ -68,32 +66,55 @@ def get_experiment_schema(name: str, scripts_dir: Path) -> Optional[ExperimentSc
     return None
 
 
-def _extract_schema_from_file(script_path: Path) -> Optional[ExperimentSchema]:
-    """Extract experiment schema from a single Python file.
+def _extract_schemas_from_file(script_path: Path) -> list[ExperimentSchema]:
+    """Extract experiment schemas for every qualifying public top-level function.
+
+    Every public function (no `_` prefix) in a file is discoverable as its own
+    experiment, as documented in
+    data/knowledge/skills/writing-experiment-scripts/SKILL.md. This is
+    intentionally different from `validate_script`, which only previews the
+    first public function it finds for a quick single-file CLI check.
 
     Args:
         script_path: Path to Python script
 
     Returns:
-        ExperimentSchema or None if no valid experiment found
+        List of ExperimentSchema (possibly empty) for every qualifying
+        public function in the file.
     """
     try:
         source = script_path.read_text(encoding="utf-8")
         tree = ast.parse(source)
     except (OSError, UnicodeDecodeError, SyntaxError):
-        return None
+        return []
 
-    # Find first public top-level function
-    func_def = None
+    schemas = []
     for node in tree.body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if not node.name.startswith("_"):
-                func_def = node
-                break
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if node.name.startswith("_"):
+            continue
 
-    if func_def is None:
-        return None
+        schema = _build_schema(script_path, node)
+        if schema:
+            schemas.append(schema)
 
+    return schemas
+
+
+def _build_schema(
+    script_path: Path, func_def: ast.FunctionDef
+) -> Optional[ExperimentSchema]:
+    """Build an ExperimentSchema for a single function definition, if it qualifies.
+
+    Args:
+        script_path: Path to the Python script the function was parsed from
+        func_def: AST FunctionDef/AsyncFunctionDef node
+
+    Returns:
+        ExperimentSchema, or None if the function doesn't qualify (wrong
+        return type, or no typed parameters).
+    """
     # Check return type annotation - must be dict
     if func_def.returns:
         return_type = _get_type_name(func_def.returns)

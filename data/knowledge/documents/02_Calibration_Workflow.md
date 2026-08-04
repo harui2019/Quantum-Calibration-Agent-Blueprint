@@ -11,23 +11,23 @@ The full tune-up sequence, as implemented by the calibration node classes (`calN
 | 00 | `cal00_time_of_flight` | Measure readout pulse round-trip delay (`tof`) and NCO propagation delay | `qblox_time_of_flight` | Nothing (first thing run on new hardware) |
 | 01/02 | `cal01_resonator_spectroscopy_full_bandwidth` / `cal02_resonator_spectroscopy` | Locate bare/dressed resonator frequency per qubit | `qblox_resonator_spectroscopy` (targeted, `cal02`) | Time of flight |
 | 03 | `cal03_resonator_punchout` | Sweep readout power/attenuation to find the high-power (bare) vs low-power (dressed) regime and pick an operating point | `qblox_resonator_punchout_attenuation` / `qblox_resonator_punchout_amplitude` | Resonator spectroscopy |
-| 04 | `cal04_resonator_flux_spectroscopy` / `cal04b_compensated_flux_spectroscopy` | Map resonator frequency vs flux bias to find the sweet spot | — (not wrapped) | Resonator spectroscopy + punchout |
+<!-- | 04 | `cal04_resonator_flux_spectroscopy` / `cal04b_compensated_flux_spectroscopy` | Map resonator frequency vs flux bias to find the sweet spot | — (not wrapped) | Resonator spectroscopy + punchout | -->
 | 05 | `cal05_qubit_spectroscopy` (+ `05a` pulsed, `05b` joint res+qubit) | Locate qubit `f01` via CW/pulsed drive spectroscopy | `qblox_qubit_spectroscopy` | Resonator frequency + operating point known |
-| 06 | `cal06_power_rabi` | Calibrate drive amplitude for a π pulse (`amp180`) | — (not wrapped) | Qubit spectroscopy (`f01`) |
-| 07 | `cal07_pulsed_flux_qubit_spectroscopy` / `07b` CW variant | Qubit spectroscopy vs flux bias | — (not wrapped) | Qubit spectroscopy |
-| 08/09 | `cal08_pi_pulse_error_amplification` / `cal09_pi_half_pulse_error_amplification` | Refine `amp180`/`amp90` via error amplification | — (not wrapped) | Power Rabi |
-| 10 | `cal10_ramsey` (+ `11` vs flux) | Measure detuning / `T2*`, correct `f01` | — (not wrapped) | π pulse calibrated |
-| 12 | `cal12_drag_pulse_calibration` | Calibrate DRAG `beta` to suppress leakage to `f12` | — (not wrapped) | Ramsey, π pulse |
-| 13 | `cal13_dispersive_shift` | Measure the qubit-state-dependent resonator shift (`chi`) | — (not wrapped) | Qubit + resonator both calibrated |
-| 14/15 | `cal14_t1` / `cal15_echo` | Measure `T1` / `T2` (echo) | — (not wrapped) | π pulse calibrated |
-| 16 | `cal16_ssro` (+ `16b` thermometer, `16c` readout frequency opt, `16d` readout power opt) | Single-shot readout fidelity, readout frequency/power optimization | — (not wrapped) | Dispersive shift known |
-| 17 | `cal17_readout_amplitude_calibration` | Final readout amplitude tune | — (not wrapped) | SSRO |
-| 18 | `cal18_allxy` | AllXY sequence — verifies single-qubit gate quality | — (not wrapped) | π and π/2 pulses calibrated |
-| 19 | `cal19_active_reset` | Calibrate active (measurement-based) reset | — (not wrapped) | SSRO, readout optimized |
-| 20 | `cal20_cryoscope` | Characterize flux-pulse distortion | — (not wrapped) | Flux control calibrated |
-| 21 | `cal21_defect_spectroscopy` | Look for TLS defects vs flux | — (not wrapped) | Flux spectroscopy |
-| 22 | `cal22_coupled_qubits_chevron` | Two-qubit iSWAP/CZ chevron mapping | — (not wrapped) | Both qubits individually calibrated |
-| 23 | `cal23_unit_cell_crosstalk` | Flux crosstalk calibration across the unit cell | — (not wrapped) | Flux spectroscopy on all involved elements |
+<!-- | 06 | `cal06_power_rabi` | Calibrate drive amplitude for a π pulse (`amp180`) | — (not wrapped) | Qubit spectroscopy (`f01`) | -->
+<!-- | 07 | `cal07_pulsed_flux_qubit_spectroscopy` / `07b` CW variant | Qubit spectroscopy vs flux bias | — (not wrapped) | Qubit spectroscopy | -->
+<!-- | 08/09 | `cal08_pi_pulse_error_amplification` / `cal09_pi_half_pulse_error_amplification` | Refine `amp180`/`amp90` via error amplification | — (not wrapped) | Power Rabi | -->
+<!-- | 10 | `cal10_ramsey` (+ `11` vs flux) | Measure detuning / `T2*`, correct `f01` | — (not wrapped) | π pulse calibrated | -->
+<!-- | 12 | `cal12_drag_pulse_calibration` | Calibrate DRAG `beta` to suppress leakage to `f12` | — (not wrapped) | Ramsey, π pulse | -->
+<!-- | 13 | `cal13_dispersive_shift` | Measure the qubit-state-dependent resonator shift (`chi`) | — (not wrapped) | Qubit + resonator both calibrated | -->
+<!-- | 14/15 | `cal14_t1` / `cal15_echo` | Measure `T1` / `T2` (echo) | — (not wrapped) | π pulse calibrated | -->
+<!-- | 16 | `cal16_ssro` (+ `16b` thermometer, `16c` readout frequency opt, `16d` readout power opt) | Single-shot readout fidelity, readout frequency/power optimization | — (not wrapped) | Dispersive shift known | -->
+<!-- | 17 | `cal17_readout_amplitude_calibration` | Final readout amplitude tune | — (not wrapped) | SSRO | -->
+<!-- | 18 | `cal18_allxy` | AllXY sequence — verifies single-qubit gate quality | — (not wrapped) | π and π/2 pulses calibrated | -->
+<!-- | 19 | `cal19_active_reset` | Calibrate active (measurement-based) reset | — (not wrapped) | SSRO, readout optimized | -->
+<!-- | 20 | `cal20_cryoscope` | Characterize flux-pulse distortion | — (not wrapped) | Flux control calibrated | -->
+<!-- | 21 | `cal21_defect_spectroscopy` | Look for TLS defects vs flux | — (not wrapped) | Flux spectroscopy | -->
+<!-- | 22 | `cal22_coupled_qubits_chevron` | Two-qubit iSWAP/CZ chevron mapping | — (not wrapped) | Both qubits individually calibrated | -->
+<!-- | 23 | `cal23_unit_cell_crosstalk` | Flux crosstalk calibration across the unit cell | — (not wrapped) | Flux spectroscopy on all involved elements | -->
 
 Randomized benchmarking (RB) has no dedicated `calNN` node in this project as of the last inspection — if asked to run RB, check whether one has been added since, rather than assuming `03_Experiment_API.md`'s list is exhaustive.
 
