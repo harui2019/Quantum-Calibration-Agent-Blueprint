@@ -71,3 +71,11 @@ fern/.fern/
 
 # Docs build
 docs/_build/
+
+# Ignore artifacts and data, but keep knowledge
+
+artifacts/
+data/
+!data/knowledge/
+large_tool_results/
+scripts/logs/
