@@ -28,6 +28,10 @@ The wrappers assume these importable modules:
 - `cal00_time_of_flight`
 - `cal02_resonator_spectroscopy`
 - `cal03_resonator_punchout`
+- `cal05a_qubit_spectroscopy_pulsed`
+- `cal06_power_rabi`
+- `cal10_ramsey`
+- `cal14_t1`
 
 Override them when needed:
 
@@ -36,6 +40,9 @@ export QBLOX_NODE_MODULE_TIMEOFFLIGHT="your_package.cal00_time_of_flight"
 export QBLOX_NODE_MODULE_MULTIPLEXEDRESONATORSPECTROSCOPY="your_package.cal02_resonator_spectroscopy"
 export QBLOX_NODE_MODULE_MULTIPLEXEDRESONATORPUNCHOUT="your_package.cal03_resonator_punchout"
 export QBLOX_NODE_MODULE_MULTIPLEXEDRESONATORPUNCHOUTAMP="your_package.cal03_resonator_punchout"
+export QBLOX_NODE_MODULE_MULTIPLEXEDPOWERRABI="your_package.cal06_power_rabi"
+export QBLOX_NODE_MODULE_MULTIPLEXEDRAMSEY="your_package.cal10_ramsey"
+export QBLOX_NODE_MODULE_MULTIPLEXEDT1="your_package.cal14_t1"
 ```
 
 ## 4. QCA-discovered experiment names
@@ -44,8 +51,12 @@ export QBLOX_NODE_MODULE_MULTIPLEXEDRESONATORPUNCHOUTAMP="your_package.cal03_res
 - `qblox_resonator_spectroscopy`
 - `qblox_resonator_punchout_attenuation`
 - `qblox_resonator_punchout_amplitude`
+- `qblox_qubit_spectroscopy`
+- `qblox_power_rabi`
+- `qblox_ramsey`
+- `qblox_t1`
 
-Every public wrapper has typed parameters and returns a JSON-compatible `dict`.
+Every public wrapper has typed parameters and returns a JSON-compatible `dict`. `qblox_t1` is the one exception to the `apply_update` convention below — its underlying node has no meaningful `post_run()`, so it never writes to device config.
 
 ## 5. Safety behavior
 

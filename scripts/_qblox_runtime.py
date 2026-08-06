@@ -28,20 +28,20 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 HARDWARE_CONFIG = Path(
     os.getenv(
         "QBLOX_HARDWARE_CONFIG",
-        str(HARDWARE_REPO_PATH / "dependencies/configs/7SQ/hw_config_AS_QRC.json"),
+        str(HARDWARE_REPO_PATH / "dependencies/configs/hero/hw_config_AS_QRC.json"),
     )
 ).expanduser().resolve()
 
 DEVICE_CONFIG = Path(
     os.getenv(
-        "QBLOX_DEVICE_CONFIG", str(HARDWARE_REPO_PATH / "dependencies/configs/7SQ/dut_config_AS_QRC.json"),
+        "QBLOX_DEVICE_CONFIG", str(HARDWARE_REPO_PATH / "dependencies/configs/hero/dut_config_AS_QRC.json"),
     )
 ).expanduser().resolve()
 
 OUTPUT_DIR = Path(
     os.getenv(
         "QBLOX_OUTPUT_DIR",
-         "/home/reny871224/Desktop/qblox/7SQ",
+         "/home/reny871224/Desktop/qblox/hero",
     )
 ).expanduser().resolve()
 

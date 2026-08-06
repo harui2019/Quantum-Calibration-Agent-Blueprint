@@ -1,8 +1,8 @@
 # Experiment API
 
-Authoritative reference for every `qblox_*` experiment QCA can currently call through `run_experiment`. **This list is exhaustive as of the last inspection — there is no `measure_T1`, `measure_Rabi`, `measure_CZ`, `measure_RB`, etc.** If you need one of those, it does not exist yet; see `02_Calibration_Workflow.md` for which underlying node class it would wrap and `04_Writing_Experiment_Scripts.md` for how to build the wrapper. Never claim to have run an experiment that isn't in this document — call `lab(action="list_experiments")` if you're unsure the list is still current.
+Authoritative reference for every `qblox_*` experiment QCA can currently call through `run_experiment`. **This list is exhaustive as of the last inspection — there is no `measure_CZ`, `measure_RB`, etc.** If you need one of those, it does not exist yet; see `02_Calibration_Workflow.md` for which underlying node class it would wrap and `04_Writing_Experiment_Scripts.md` for how to build the wrapper. Never claim to have run an experiment that isn't in this document — call `lab(action="list_experiments")` if you're unsure the list is still current.
 
-All five live in `scripts/`, all require the qblox Python environment (`data/knowledge/skills/qblox-hardware-environment/SKILL.md`), and all are subject to the general result contract in `05_Result_Format.md`. Frequencies are in Hz unless the parameter name says otherwise; times are in seconds.
+All eight live in `scripts/`, all require the qblox Python environment (`data/knowledge/skills/qblox-hardware-environment/SKILL.md`), and all are subject to the general result contract in `05_Result_Format.md`. Frequencies are in Hz unless the parameter name says otherwise; times are in seconds.
 
 ---
 
@@ -147,6 +147,85 @@ Before executing, this wrapper resets input attenuation to 0 dB for the requeste
 
 ---
 
+## `qblox_power_rabi`
+
+**Purpose**: Sweep drive amplitude and fit a Power Rabi oscillation to find each qubit's pi-pulse amplitude (`amp180`). Wraps `cal06_power_rabi.MultiplexedPowerRabi`.
+
+**Inputs**
+
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `qubits` | `list[str]` | required | e.g. `["q1", "q2"]` |
+| `amp_start` | float | `0.0` | Sweep start amplitude (arb. units, same scale as `rxy.amp180`) |
+| `amp_stop` | float | `1.0` | Sweep stop amplitude |
+| `amp_npoints` | int | `41` | |
+| `repetitions` | int | `100` | |
+| `drive_att_db` | int or `None` | `None` | Applied to every requested qubit's drive line before the sweep |
+| `drive_duration_s` | float or `None` | `None` | X-pulse duration override applied to every requested qubit |
+| `minimum_amp180` | float | `1e-4` | Reject the fit if the extracted `amp180` is below this floor |
+| `apply_update` | bool | `False` | Must be explicitly `True` to write the fitted `amp180` back to device config |
+
+**Required calibration parameters**: qubit frequency (`f01`) from `qblox_qubit_spectroscopy` and a working readout operating point.
+
+**Per-qubit outputs**: `accepted`, `failure_reasons`, `fitted_amp180`, `fit_success`, `image_path`, `recommended_action`, `sweep.amplitude`, `sweep.rotated_signal`.
+
+**Plots**: one PNG per qubit — rotated signal vs drive amplitude with the cosine fit and fitted `amp180` overlaid.
+
+---
+
+## `qblox_ramsey`
+
+**Purpose**: Interleaved `+`/`-` detuning Ramsey experiment; fits `T2*` and the qubit `f01` frequency error per qubit. Interleaving both detuning signs every shot (rather than two separate sweeps) resolves the sign of a real frequency error and cancels slow drift. Wraps `cal10_ramsey.MultiplexedRamsey`.
+
+**Inputs**
+
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `qubits` | `list[str]` | required | e.g. `["q1", "q2"]` |
+| `tau_start_s` | float | `0.0` | Free-evolution delay sweep start |
+| `tau_stop_s` | float | `20e-6` | Free-evolution delay sweep stop |
+| `tau_step_s` | float | `200e-9` | Free-evolution delay step |
+| `frequency_detuning_hz` | float | `1e6` | Artificial detuning applied symmetrically around `f01` |
+| `repetitions` | int | `100` | |
+| `minimum_t2_star_s` | float | `1e-7` | Reject the fit if `T2*` falls below this floor |
+| `maximum_t2_star_s` | float | `1e-3` | Reject the fit if `T2*` exceeds this ceiling |
+| `apply_update` | bool | `False` | Must be explicitly `True` to correct `f01` in device config by the fitted frequency error |
+
+**Required calibration parameters**: qubit frequency (`f01`) from `qblox_qubit_spectroscopy`.
+
+**Per-qubit outputs**: `accepted`, `failure_reasons`, `frequency_error_hz`, `t2_star_s`, `image_path`, `recommended_action`, `sweep.tau_s`, `sweep.rotated_signal_plus_detuning`, `sweep.rotated_signal_minus_detuning`.
+
+**Plots**: one PNG per qubit — rotated signal vs delay for both detuning branches, each with its damped-oscillator fit overlaid.
+
+---
+
+## `qblox_t1`
+
+**Purpose**: Measure qubit energy-relaxation time (`T1`) via a delayed-readout exponential decay sweep. Wraps `cal14_t1.MultiplexedT1`.
+
+**Does not support `apply_update`** — the underlying node's `post_run()` is a no-op (`T1` is a reported diagnostic, not a parameter fed back into device config). Its result therefore has no `update_applied`/`config_saved` keys, unlike every other wrapper above.
+
+**Inputs**
+
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `qubits` | `list[str]` | required | e.g. `["q1", "q2"]` |
+| `tau_start_s` | float | `0.0` | Post-pi-pulse delay sweep start |
+| `tau_stop_s` | float | `100e-6` | Post-pi-pulse delay sweep stop |
+| `tau_step_s` | float | `2e-6` | Post-pi-pulse delay step |
+| `repetitions` | int | `100` | |
+| `drive_att_db` | int or `None` | `None` | Applied to every requested qubit's drive line before the sweep |
+| `minimum_t1_s` | float | `1e-7` | Reject the fit if `T1` falls below this floor |
+| `maximum_t1_s` | float | `1e-3` | Reject the fit if `T1` exceeds this ceiling |
+
+**Required calibration parameters**: pi pulse calibrated (`amp180` from `qblox_power_rabi`).
+
+**Per-qubit outputs**: `accepted`, `failure_reasons`, `t1_s`, `fit_success`, `image_path`, `recommended_action`, `sweep.tau_s`, `sweep.rotated_signal`.
+
+**Plots**: one PNG per qubit — rotated signal vs delay with the exponential-decay fit overlaid.
+
+---
+
 ## Quick Reference
 
 | Experiment | Scope | `apply_update` supported | Plots |
@@ -156,3 +235,6 @@ Before executing, this wrapper resets input attenuation to 0 dB for the requeste
 | `qblox_resonator_punchout_amplitude` | multi-qubit (per-qubit values) | yes | yes |
 | `qblox_qubit_spectroscopy` | single qubit | yes | yes (1) |
 | `qblox_time_of_flight` | multi-qubit (one module) | yes | yes |
+| `qblox_power_rabi` | multi-qubit | yes | yes |
+| `qblox_ramsey` | multi-qubit | yes | yes |
+| `qblox_t1` | multi-qubit | no (`post_run()` is a no-op) | yes |

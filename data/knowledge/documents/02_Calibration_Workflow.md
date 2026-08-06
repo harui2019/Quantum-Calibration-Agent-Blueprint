@@ -13,13 +13,14 @@ The full tune-up sequence, as implemented by the calibration node classes (`calN
 | 03 | `cal03_resonator_punchout` | Sweep readout power/attenuation to find the high-power (bare) vs low-power (dressed) regime and pick an operating point | `qblox_resonator_punchout_attenuation` / `qblox_resonator_punchout_amplitude` | Resonator spectroscopy |
 <!-- | 04 | `cal04_resonator_flux_spectroscopy` / `cal04b_compensated_flux_spectroscopy` | Map resonator frequency vs flux bias to find the sweet spot | — (not wrapped) | Resonator spectroscopy + punchout | -->
 | 05 | `cal05_qubit_spectroscopy` (+ `05a` pulsed, `05b` joint res+qubit) | Locate qubit `f01` via CW/pulsed drive spectroscopy | `qblox_qubit_spectroscopy` | Resonator frequency + operating point known |
-<!-- | 06 | `cal06_power_rabi` | Calibrate drive amplitude for a π pulse (`amp180`) | — (not wrapped) | Qubit spectroscopy (`f01`) | -->
+| 06 | `cal06_power_rabi` | Calibrate drive amplitude for a π pulse (`amp180`) | `qblox_power_rabi` | Qubit spectroscopy (`f01`) |
 <!-- | 07 | `cal07_pulsed_flux_qubit_spectroscopy` / `07b` CW variant | Qubit spectroscopy vs flux bias | — (not wrapped) | Qubit spectroscopy | -->
 <!-- | 08/09 | `cal08_pi_pulse_error_amplification` / `cal09_pi_half_pulse_error_amplification` | Refine `amp180`/`amp90` via error amplification | — (not wrapped) | Power Rabi | -->
-<!-- | 10 | `cal10_ramsey` (+ `11` vs flux) | Measure detuning / `T2*`, correct `f01` | — (not wrapped) | π pulse calibrated | -->
+| 10 | `cal10_ramsey` (+ `11` vs flux) | Measure detuning / `T2*`, correct `f01` | `qblox_ramsey` | π pulse calibrated |
 <!-- | 12 | `cal12_drag_pulse_calibration` | Calibrate DRAG `beta` to suppress leakage to `f12` | — (not wrapped) | Ramsey, π pulse | -->
 <!-- | 13 | `cal13_dispersive_shift` | Measure the qubit-state-dependent resonator shift (`chi`) | — (not wrapped) | Qubit + resonator both calibrated | -->
-<!-- | 14/15 | `cal14_t1` / `cal15_echo` | Measure `T1` / `T2` (echo) | — (not wrapped) | π pulse calibrated | -->
+| 14 | `cal14_t1` | Measure `T1` | `qblox_t1` (no `apply_update` — `post_run()` is a no-op) | π pulse calibrated |
+<!-- | 15 | `cal15_echo` | Measure `T2` (echo) | — (not wrapped) | π pulse calibrated | -->
 <!-- | 16 | `cal16_ssro` (+ `16b` thermometer, `16c` readout frequency opt, `16d` readout power opt) | Single-shot readout fidelity, readout frequency/power optimization | — (not wrapped) | Dispersive shift known | -->
 <!-- | 17 | `cal17_readout_amplitude_calibration` | Final readout amplitude tune | — (not wrapped) | SSRO | -->
 <!-- | 18 | `cal18_allxy` | AllXY sequence — verifies single-qubit gate quality | — (not wrapped) | π and π/2 pulses calibrated | -->
@@ -62,7 +63,7 @@ Two-qubit calibration (coupled chevron, CZ optimization) only makes sense after 
 
 ## Practical Notes for the Agent
 
-- **QCA today only automates stages 00, 02/03, 05.** Everything past qubit spectroscopy currently has to be run manually in the notebook, or a new wrapper has to be written (`04_Writing_Experiment_Scripts.md`) before QCA can drive it. Don't tell a user "I ran a Ramsey experiment" unless a `qblox_ramsey`-style wrapper actually exists in `scripts/` — check `list_experiments` first.
+- **QCA today automates stages 00, 02/03, 05, 06, 10, 14.** Stages 07–09, 12–13, 15–23 still have to be run manually in the notebook, or a new wrapper has to be written (`04_Writing_Experiment_Scripts.md`) before QCA can drive them. Don't tell a user "I ran a DRAG calibration" unless a `qblox_*`-style wrapper actually exists in `scripts/` — check `list_experiments` first.
 - Every wrapped stage writes its result into `dut_config_AS_QRC.json`/`hw_config_AS_QRC.json` only when called with `apply_update=True` **and** the deterministic quality checks in that wrapper pass. A `status: "success"` result with `apply_update` left at its default `False` has **not** changed the device config — say so explicitly rather than assuming the next stage will see the new value.
 - If a later stage's results look wrong, the first thing to check is whether the upstream stage's value was actually applied (`update_applied` in its result) before assuming the later stage's own fit is broken.
 
