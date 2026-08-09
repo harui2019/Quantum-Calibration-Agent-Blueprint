@@ -1,9 +1,0 @@
-Traceback (most recent call last):
-  File "<string>", line 7, in <module>
-  File "/home/reny871224/Quantum-Calibration-Agent-Blueprint/scripts/qblox_resonator_spectroscopy.py", line 46, in qblox_resonator_spectroscopy
-    qobjs = [get_qubit(qubit_name) for qubit_name in qubits]
-  File "/home/reny871224/Quantum-Calibration-Agent-Blueprint/scripts/qblox_resonator_spectroscopy.py", line 46, in <listcomp>
-    qobjs = [get_qubit(qubit_name) for qubit_name in qubits]
-  File "/home/reny871224/Quantum-Calibration-Agent-Blueprint/scripts/_qblox_runtime.py", line 107, in get_qubit
-    raise KeyError(
-KeyError: 'Unable to find qubit 1 in the configured QuantumDevice. Replace get_qubit() with the same accessor currently used to create q1 and q2 in your notebook.'

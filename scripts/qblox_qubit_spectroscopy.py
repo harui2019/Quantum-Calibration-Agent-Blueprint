@@ -31,10 +31,10 @@ def _complex_components(values) -> tuple[list[float], list[float]]:
 
 def qblox_qubit_spectroscopy(
     qubit_name: str = "q1",
-    f01_width_mhz: Annotated[float, (1.0, 1000.0)] = 400.0,
+    f01_width_mhz: Annotated[float, (1.0, 1000.0)] = 100.0,
     f01_npoints: Annotated[int, (21, 2001)] = 200,
     repetitions: Annotated[int, (1, 10000)] = 200,
-    saturation_amp: Annotated[float, (0.0, 1.0)] = 1,
+    saturation_amp: Annotated[float, (0.0, 1.0)] = 0.130335,
     saturation_duration_s: Annotated[float, (1e-9, 100e-6)] = 1.6e-5,
     drive_att_db: Annotated[int, (0, 30)] = 0,
     minimum_linewidth_mhz: float = 0.05,

@@ -1168,7 +1168,10 @@ def _is_process_running(workflow_id: str) -> bool:
             if ") Z" in stat or ") Zs" in stat:
                 return False  # Zombie process
         return True
-    except (ProcessLookupError, ValueError, PermissionError, OSError):
+    except PermissionError:
+        # Process exists but we can't signal it - assume running
+        return True
+    except (ProcessLookupError, ValueError, OSError):
         return False
 
 
@@ -1346,24 +1349,17 @@ async def get_workflow_logs(workflow_id: str, lines: int = 100):
 @app.get("/workflows/{workflow_id}/running")
 async def get_workflow_running(workflow_id: str):
     """Check if workflow process is running."""
-    import signal
-
     pid_file = WORKFLOWS_DIR / workflow_id / "pid"
     if not pid_file.exists():
         return {"workflow_id": workflow_id, "running": False, "pid": None}
 
-    try:
+    if _is_process_running(workflow_id):
         pid = int(pid_file.read_text().strip())
-        # Check if process is alive
-        os.kill(pid, 0)
         return {"workflow_id": workflow_id, "running": True, "pid": pid}
-    except (ProcessLookupError, ValueError):
-        # Process not running, clean up pid file
-        pid_file.unlink(missing_ok=True)
-        return {"workflow_id": workflow_id, "running": False, "pid": None}
-    except PermissionError:
-        # Process exists but we can't signal it
-        return {"workflow_id": workflow_id, "running": True, "pid": pid}
+
+    # Dead or zombie process - clean up stale pid file
+    pid_file.unlink(missing_ok=True)
+    return {"workflow_id": workflow_id, "running": False, "pid": None}
 
 
 @app.post("/workflows/{workflow_id}/start")
@@ -1378,14 +1374,12 @@ async def start_workflow(workflow_id: str):
     pid_file = workflow_dir / "pid"
     log_file = workflow_dir / "output.log"
 
-    # Check if already running
+    # Check if already running (treats a dead/zombie pid as not running)
     if pid_file.exists():
-        try:
+        if _is_process_running(workflow_id):
             pid = int(pid_file.read_text().strip())
-            os.kill(pid, 0)
             return {"error": "Workflow is already running", "pid": pid}
-        except (ProcessLookupError, ValueError):
-            pid_file.unlink(missing_ok=True)
+        pid_file.unlink(missing_ok=True)
 
     # Clear previous log
     log_file.write_text("")

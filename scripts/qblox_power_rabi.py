@@ -21,9 +21,9 @@ from cal06_power_rabi import MultiplexedPowerRabi
 def qblox_power_rabi(
     qubits: list[str],
     amp_start: Annotated[float, (0.0, 1.0)] = 0.0,
-    amp_stop: Annotated[float, (0.0, 1.0)] = 1.0,
-    amp_npoints: Annotated[int, (11, 501)] = 41,
-    repetitions: Annotated[int, (1, 10000)] = 100,
+    amp_stop: Annotated[float, (0.0, 1.0)] = 0.5,
+    amp_npoints: Annotated[int, (11, 501)] = 200,
+    repetitions: Annotated[int, (1, 10000)] = 600,
     drive_att_db: int | None = None,
     drive_duration_s: float | None = None,
     minimum_amp180: float = 1e-4,

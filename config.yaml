@@ -32,6 +32,7 @@ general:
 vlm:
   provider: "nvidia"
   model: "nvidia/ising-calibration-1-35b-a3b"
+  # model: "meta/llama-3.3-70b-instruct"
   api_key_env: "NVIDIA_API_KEY"
   temperature: 0.2
   max_tokens: 32768

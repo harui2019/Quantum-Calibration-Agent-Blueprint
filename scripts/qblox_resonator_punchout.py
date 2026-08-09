@@ -42,7 +42,7 @@ def _select_operating_index(
 
 def qblox_resonator_punchout_attenuation(
     qubits: list[str],
-    frequency_width_hz: float = 20e6,
+    frequency_width_hz: float = 4e6,
     frequency_npoints: int = 101,
     attenuation_start_db: int = 0,
     attenuation_stop_db: int = 30,
@@ -162,7 +162,7 @@ def qblox_resonator_punchout_attenuation(
 
 def qblox_resonator_punchout_amplitude(
     qubits: list[str],
-    frequency_width_hz: float = 20e6,
+    frequency_width_hz: float = 4e6,
     frequency_npoints: int = 101,
     amplitude_start: float = 0.005,
     amplitude_stop: float = 0.20,

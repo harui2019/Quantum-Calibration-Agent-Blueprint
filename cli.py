@@ -541,6 +541,7 @@ async def _run_non_interactive(
     Returns:
         Exit code (0 success, 1 error).
     """
+    import re
     import sys
     import uuid
     import time
@@ -549,86 +550,204 @@ async def _run_non_interactive(
         "configurable": {"thread_id": str(uuid.uuid4())},
         "recursion_limit": 1000,
     }
-    inputs = {"messages": [{"role": "user", "content": message}]}
 
-    # Track if we need to print timestamp at start of next content
-    need_timestamp = True
-    # Track tool start times for duration
-    tool_start_times: dict[str, float] = {}
+    # The underlying model occasionally ends its turn without making a real
+    # tool call: instead of a structured tool_calls entry, it free-texts
+    # something that only *looks* like one - an XML-ish tag
+    # (`<workflow action="status" />`), a bare/fenced JSON blob
+    # (`{"action": "status", ...}`), or a workflow-tool-style dot-notation
+    # update (`"nodes.node_3.state": "success"`). None of these actually
+    # invoke anything. When that happens, nudge the model to continue in
+    # the same thread (so it keeps full context) rather than leaving the
+    # caller with a dead process. Bounded so a genuinely stuck model
+    # doesn't loop forever.
+    MAX_CONTINUATIONS = 3
+    STALL_CONTENT_THRESHOLD = 150  # chars; below this + no tool call = stalled
+    # Deliberately broad rather than an enumerated list of known formats:
+    # this model has produced at least five distinct disguises for a fake
+    # tool call so far (XML-tag, bare JSON, JSON+stray closing tag,
+    # markdown-fenced JSON, and a triple-backtick fence using the tool name
+    # as the "language"). A real final answer meant for a human, in this
+    # pipeline, has never needed a code fence, an XML-ish tag, or a raw
+    # dot-notation/JSON action blob - so treat any of those as a pseudo-call
+    # rather than trying to keep enumerating new shapes as they appear.
+    _PSEUDO_TOOL_CALL_RE = re.compile(
+        r'```'                                  # any markdown code fence
+        r'|<\s*[a-zA-Z_][\w-]*'                  # any XML/HTML-ish opening tag
+        r'|"action"\s*:'                         # bare/fenced JSON action blob
+        r'|"nodes\.[\w_]+\.(state|extracted|experiment_id|run_count)"'  # dot-notation update
+        r'|\b\w+\s*\(\s*(action|workflow_id|experiment_name)\s*=',       # Python-call-style syntax
+        re.IGNORECASE,
+    )
+    NUDGE = (
+        "You stopped without calling a tool or giving a complete answer. "
+        "Continue executing the workflow from exactly where you left off."
+    )
+    NUDGE_UNPERSISTED = (
+        "You ran an experiment but never actually called the `workflow` tool "
+        "to persist the result (a prose claim that the workflow is done is "
+        "not enough - the state on disk is unchanged). Call "
+        "`workflow(action=\"update\", ...)` and `workflow(action=\"log\", ...)` "
+        "now to record what actually happened, then continue."
+    )
+    # Scope the extra "did the last real action persist state?" check to
+    # workflow-execution runs specifically (this is the exact prompt
+    # server.py's /workflows/{id}/start spawns) - a generic non-interactive
+    # task legitimately may finish without ever calling `workflow`.
+    is_workflow_task = message.strip().lower().startswith("execute workflow")
+
+    current_message = message
+    # Every real (structured) tool call made so far, across all attempts in
+    # this whole run (NOT reset per attempt) - a nudge-only attempt that
+    # makes no tool call of its own must still see the `run_experiment` an
+    # earlier attempt made, so a prose-only "it's done" after that is still
+    # recognized as unpersisted.
+    real_tool_names: list[str] = []
 
     try:
-        if stream:
-            async for event in agent.astream_events(
-                inputs, config=config, version="v2"
-            ):
-                kind = event.get("event", "")
-                if kind == "on_chat_model_stream":
-                    chunk = event.get("data", {}).get("chunk")
-                    if chunk and hasattr(chunk, "content"):
-                        # Handle both string content and list of content blocks
-                        raw_content = chunk.content
-                        if isinstance(raw_content, str):
-                            content = raw_content
-                        elif isinstance(raw_content, list):
-                            # Extract text from content blocks
-                            content = "".join(
-                                block.get("text", "") if isinstance(block, dict) else str(block)
-                                for block in raw_content
-                            )
+        for attempt in range(MAX_CONTINUATIONS + 1):
+            inputs = {"messages": [{"role": "user", "content": current_message}]}
+
+            # Track if we need to print timestamp at start of next content
+            need_timestamp = True
+            # Track tool start times for duration
+            tool_start_times: dict[str, float] = {}
+            # Final AI message of *this* attempt, used to detect a stall
+            last_ai_message = None
+
+            if stream:
+                async for event in agent.astream_events(
+                    inputs, config=config, version="v2"
+                ):
+                    kind = event.get("event", "")
+                    if kind == "on_chat_model_end":
+                        last_ai_message = event.get("data", {}).get("output")
+                    if kind == "on_chat_model_stream":
+                        chunk = event.get("data", {}).get("chunk")
+                        if chunk and hasattr(chunk, "content"):
+                            # Handle both string content and list of content blocks
+                            raw_content = chunk.content
+                            if isinstance(raw_content, str):
+                                content = raw_content
+                            elif isinstance(raw_content, list):
+                                # Extract text from content blocks
+                                content = "".join(
+                                    block.get("text", "") if isinstance(block, dict) else str(block)
+                                    for block in raw_content
+                                )
+                            else:
+                                content = ""
+                            if content:
+                                # Add timestamp at start of new content after newline
+                                if need_timestamp and content.strip():
+                                    sys.stdout.write(f"{_timestamp()} ")
+                                    need_timestamp = False
+                                # Check if content ends with newline (next chunk needs timestamp)
+                                if content.endswith("\n"):
+                                    need_timestamp = True
+                                sys.stdout.write(content)
+                                sys.stdout.flush()
+                    elif kind == "on_tool_start":
+                        tool_name = event.get("name", "")
+                        run_id = event.get("run_id", "")
+                        # Record every *real* (structured) tool call this attempt made,
+                        # regardless of `quiet` - used below to tell a genuine finish
+                        # (last real action persisted state via `workflow`) apart from
+                        # trailing off after `run_experiment` with only prose claiming
+                        # it's done.
+                        real_tool_names.append(tool_name)
+                        if not quiet:
+                            tool_input = event.get("data", {}).get("input", {})
+                            tool_start_times[run_id] = time.time()
+
+                            # Always show inputs, verbose=full output (no truncation)
+                            input_str = _format_tool_input(tool_input, truncate=not verbose)
+                            if input_str:
+                                sys.stderr.write(f"{_timestamp()} \U0001f527 Calling tool: {tool_name}\n")
+                                sys.stderr.write(f"           \u2192 {input_str}\n")
+                            else:
+                                sys.stderr.write(f"{_timestamp()} \U0001f527 Calling tool: {tool_name}\n")
+                            need_timestamp = True
+                    elif kind == "on_tool_end" and not quiet:
+                        tool_name = event.get("name", "")
+                        run_id = event.get("run_id", "")
+                        output = event.get("data", {}).get("output")
+
+                        duration = ""
+                        if run_id in tool_start_times:
+                            elapsed = time.time() - tool_start_times.pop(run_id)
+                            duration = f" ({elapsed:.1f}s)"
+
+                        # Always show output, verbose=full output (no truncation)
+                        output_str = _format_tool_output(output, truncate=not verbose)
+                        sys.stderr.write(f"{_timestamp()} \u2714 {tool_name} completed{duration}: {output_str}\n")
+                        need_timestamp = True
+                sys.stdout.write("\n")
+            else:
+                result = await agent.ainvoke(inputs, config=config)
+                final = result.get("messages", [])
+                if final:
+                    last_ai_message = final[-1]
+                    content = getattr(last_ai_message, "content", str(last_ai_message))
+                    # Add timestamp to each line
+                    lines = content.split("\n")
+                    for line in lines:
+                        if line.strip():
+                            sys.stdout.write(f"{_timestamp()} {line}\n")
                         else:
-                            content = ""
-                        if content:
-                            # Add timestamp at start of new content after newline
-                            if need_timestamp and content.strip():
-                                sys.stdout.write(f"{_timestamp()} ")
-                                need_timestamp = False
-                            # Check if content ends with newline (next chunk needs timestamp)
-                            if content.endswith("\n"):
-                                need_timestamp = True
-                            sys.stdout.write(content)
-                            sys.stdout.flush()
-                elif kind == "on_tool_start" and not quiet:
-                    tool_name = event.get("name", "")
-                    run_id = event.get("run_id", "")
-                    tool_input = event.get("data", {}).get("input", {})
-                    tool_start_times[run_id] = time.time()
+                            sys.stdout.write("\n")
 
-                    # Always show inputs, verbose=full output (no truncation)
-                    input_str = _format_tool_input(tool_input, truncate=not verbose)
-                    if input_str:
-                        sys.stderr.write(f"{_timestamp()} \U0001f527 Calling tool: {tool_name}\n")
-                        sys.stderr.write(f"           \u2192 {input_str}\n")
-                    else:
-                        sys.stderr.write(f"{_timestamp()} \U0001f527 Calling tool: {tool_name}\n")
-                    need_timestamp = True
-                elif kind == "on_tool_end" and not quiet:
-                    tool_name = event.get("name", "")
-                    run_id = event.get("run_id", "")
-                    output = event.get("data", {}).get("output")
+            # Decide whether this attempt actually made progress (a real
+            # tool call) or gave a substantive closing answer. If neither,
+            # the model stalled - nudge it to continue in the same thread
+            # instead of returning a silent no-op.
+            made_tool_call = bool(
+                last_ai_message is not None
+                and getattr(last_ai_message, "tool_calls", None)
+            )
+            final_content = ""
+            if last_ai_message is not None:
+                raw = getattr(last_ai_message, "content", "")
+                final_content = raw if isinstance(raw, str) else str(raw)
+            looks_like_pseudo_call = bool(_PSEUDO_TOOL_CALL_RE.search(final_content))
+            looks_stalled = not made_tool_call and (
+                len(final_content.strip()) < STALL_CONTENT_THRESHOLD
+                or looks_like_pseudo_call
+            )
 
-                    duration = ""
-                    if run_id in tool_start_times:
-                        elapsed = time.time() - tool_start_times.pop(run_id)
-                        duration = f" ({elapsed:.1f}s)"
+            # Even a fine-sounding closing summary can't be trusted on its
+            # own here: if the last real tool call anywhere in this run was
+            # `run_experiment` (produced data) and never followed by a real
+            # `workflow` call (persisted it), nothing was actually recorded
+            # no matter how confidently the model claims otherwise.
+            unpersisted = (
+                is_workflow_task
+                and bool(real_tool_names)
+                and real_tool_names[-1] != "workflow"
+            )
+            stalled = looks_stalled or unpersisted
 
-                    # Always show output, verbose=full output (no truncation)
-                    output_str = _format_tool_output(output, truncate=not verbose)
-                    sys.stderr.write(f"{_timestamp()} \u2714 {tool_name} completed{duration}: {output_str}\n")
-                    need_timestamp = True
-            sys.stdout.write("\n")
-        else:
-            result = await agent.ainvoke(inputs, config=config)
-            final = result.get("messages", [])
-            if final:
-                last = final[-1]
-                content = getattr(last, "content", str(last))
-                # Add timestamp to each line
-                lines = content.split("\n")
-                for line in lines:
-                    if line.strip():
-                        sys.stdout.write(f"{_timestamp()} {line}\n")
-                    else:
-                        sys.stdout.write("\n")
+            if not stalled or attempt == MAX_CONTINUATIONS:
+                if stalled:
+                    sys.stderr.write(
+                        f"{_timestamp()} \u26a0 Stopped without finishing after "
+                        f"{MAX_CONTINUATIONS} auto-continue attempt(s) - giving up.\n"
+                    )
+                break
+
+            if unpersisted and not looks_stalled:
+                sys.stderr.write(
+                    f"{_timestamp()} \u26a0 Claimed done but never persisted state via "
+                    f"`workflow` - auto-continuing (attempt {attempt + 2}/{MAX_CONTINUATIONS + 1})\n"
+                )
+                current_message = NUDGE_UNPERSISTED
+            else:
+                sys.stderr.write(
+                    f"{_timestamp()} \u26a0 Model stopped without a tool call or complete "
+                    f"answer - auto-continuing (attempt {attempt + 2}/{MAX_CONTINUATIONS + 1})\n"
+                )
+                current_message = NUDGE
+
         return 0
     except KeyboardInterrupt:
         return 130

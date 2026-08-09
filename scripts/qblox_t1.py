@@ -22,7 +22,7 @@ def qblox_t1(
     qubits: list[str],
     tau_start_s: Annotated[float, (0.0, 1e-3)] = 1e-6,
     tau_stop_s: Annotated[float, (1e-9, 1e-3)] = 200e-6,
-    tau_step_s: Annotated[float, (1e-9, 1e-4)] = 2e-6,
+    tau_step_s: Annotated[float, (1e-9, 1e-4)] = 5e-6,
     repetitions: Annotated[int, (1, 10000)] = 200,
     drive_att_db: int | None = None,
     minimum_t1_s: float = 1e-7,

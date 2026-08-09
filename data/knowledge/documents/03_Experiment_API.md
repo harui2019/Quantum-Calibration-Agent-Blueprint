@@ -44,7 +44,7 @@ All eight live in `scripts/`, all require the qblox Python environment (`data/kn
 | Param | Type | Default |
 |---|---|---|
 | `qubits` | `list[str]` | required |
-| `frequency_width_hz` | float | `20e6` |
+| `frequency_width_hz` | float | `4e6` |
 | `frequency_npoints` | int | `101` |
 | `attenuation_start_db` | int | `0` |
 | `attenuation_stop_db` | int | `30` |
@@ -74,7 +74,7 @@ All eight live in `scripts/`, all require the qblox Python environment (`data/kn
 | Param | Type | Default |
 |---|---|---|
 | `qubits` | `list[str]` | required |
-| `frequency_width_hz` | float | `20e6` |
+| `frequency_width_hz` | float | `4e6` |
 | `frequency_npoints` | int | `101` |
 | `amplitude_start` | float | `0.005` |
 | `amplitude_stop` | float | `0.20` |
